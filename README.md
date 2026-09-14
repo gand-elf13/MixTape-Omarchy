@@ -113,9 +113,14 @@ clear retained components. The bar briefly disappears; music continues.
 
 ## Develop from a checkout
 
+Find the commit you want at
+[github.com/nwohater/MixTape-Omarchy/commits/main](https://github.com/nwohater/MixTape-Omarchy/commits/main)
+and pin the checkout to its full SHA before running anything from it:
+
 ```bash
 git clone git@github.com:nwohater/MixTape-Omarchy.git mixtape-plugin
 cd mixtape-plugin
+git checkout --detach <commit-sha>
 python3 install.py --section right
 omarchy restart shell
 ```
@@ -125,7 +130,8 @@ omarchy restart shell
 widget while preserving other settings. Keep the checkout in place. It
 refuses to replace a different installation with the same plugin ID.
 If you already use this development installation, skip `omarchy plugin add`.
-Update the checkout with `git pull --ff-only`, then restart the shell.
+To update, pick a new commit SHA, then run `git fetch` and
+`git checkout --detach <commit-sha>`, and restart the shell.
 
 ### Checks
 

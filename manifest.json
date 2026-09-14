@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "local.mixtape",
+  "name": "Mixtape",
+  "version": "0.2.0",
+  "description": "A cassette deck for local music, right in the Omarchy bar.",
+  "author": "nwohater",
+  "homepage": "https://github.com/nwohater/MixTape-Omarchy",
+  "repository": "https://github.com/nwohater/MixTape-Omarchy",
+  "kinds": ["bar-widget"],
+  "entryPoints": {"barWidget": "Widget.qml"},
+  "barWidget": {
+    "displayName": "Mixtape",
+    "category": "Media",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

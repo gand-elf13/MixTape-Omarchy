@@ -159,10 +159,13 @@ Panel {
         visible: false
         color: Color.background
         implicitWidth: 440
-        implicitHeight: 610
+        implicitHeight: root.view === "deck"
+            ? Math.ceil(titleBar.height + 16 + deckColumn.implicitHeight + 18
+                        + (statusMessage.visible ? statusMessage.implicitHeight + 10 : 0))
+            : 610
         // Fixed-size utility windows float automatically in Hyprland.
-        minimumSize: Qt.size(440, 610)
-        maximumSize: Qt.size(440, 610)
+        minimumSize: Qt.size(440, implicitHeight)
+        maximumSize: Qt.size(440, implicitHeight)
         onClosed: root.close()
 
         Rectangle {
@@ -210,7 +213,8 @@ Panel {
             Keys.onRightPressed: if (root.view === "deck") root.act("seek", 10)
 
             Column {
-                anchors.fill: parent
+                id: deckColumn
+                width: parent.width
                 spacing: 14
                 visible: root.view === "deck"
                 Row {
@@ -292,6 +296,7 @@ Panel {
                 onSubmit: function(command, value) { root.submitFiles(command, value) }
             }
             Text {
+                id: statusMessage
                 anchors.bottom: parent.bottom; width: parent.width
                 visible: root.errorMessage !== "" || root.notice !== ""
                 text: root.errorMessage || root.notice; textFormat: Text.PlainText; wrapMode: Text.Wrap

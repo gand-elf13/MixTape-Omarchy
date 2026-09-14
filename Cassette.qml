@@ -16,11 +16,16 @@ Rectangle {
 
     Repeater {
         model: 4
-        Text {
+        Rectangle {
             required property int index
-            x: index % 2 === 0 ? 10 : tape.width - 20
-            y: index < 2 ? 6 : tape.height - 24
-            text: "⊕"; color: tape.ink; opacity: 0.5; font.pixelSize: 14
+            width: 10; height: 10; radius: 5
+            x: index % 2 === 0 ? 9 : tape.width - width - 9
+            y: index < 2 ? 9 : tape.height - height - 9
+            color: "transparent"
+            border.color: tape.ink
+            opacity: 0.5
+            Rectangle { anchors.centerIn: parent; width: 6; height: 1; color: tape.ink }
+            Rectangle { anchors.centerIn: parent; width: 1; height: 6; color: tape.ink }
         }
     }
     Rectangle {

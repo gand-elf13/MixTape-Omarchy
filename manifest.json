@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "local.mixtape",
   "name": "Mixtape",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A cassette deck for local music, right in the Omarchy bar.",
   "author": "nwohater",
   "homepage": "https://github.com/nwohater/MixTape-Omarchy",

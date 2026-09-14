@@ -1,7 +1,7 @@
 # Mixtape for Omarchy
 
 A little cassette deck in your bar. Play local music, build named mixtapes,
-and watch the reels turn—all in a terminal-inspired, theme-aware popup.
+and watch the reels turn—all in a terminal-inspired, theme-aware floating window.
 
 ## Install
 
@@ -28,6 +28,15 @@ omarchy bar move local.mixtape --section center
 ```
 
 Use `left`, `center`, or `right`. Click the cassette icon to open the deck.
+
+### Move it and leave it open
+
+Drag the **MIXTAPE · drag to move** title strip to position the player anywhere
+on your desktop. It stays open when you click other applications or bar
+widgets. You can also use Hyprland's **Super + left-drag** window gesture.
+Close it with **×**, Escape from the deck, or another click on its bar icon.
+Closing the window does not stop the music. The window floats on its current
+workspace; it is not pinned across workspaces.
 
 ## Create your first mixtape
 
@@ -77,7 +86,7 @@ shuffled sequence. Manual reordering turns shuffle off before moving the
 selected song. Save captures the queue's current order. Repeat settings are
 session controls and are not embedded in saved M3U files.
 
-Playback continues when the popup closes or the shell restarts. Reels resume
+Playback continues when the player window closes or the shell restarts. Reels resume
 spinning when you reopen the deck during playback, and stop when paused.
 At the end of the last track with repeat off, Play restarts that track.
 

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls as Controls
 import Quickshell
 import Quickshell.Io
@@ -89,6 +90,15 @@ Panel {
             }
         } catch (e) { if (showErrors) errorMessage = "Could not read player response" }
     }
+    function open() {
+        controller.show()
+        playerWindow.visible = true
+        Qt.callLater(function() { deck.forceActiveFocus() })
+    }
+    function close() {
+        controller.hide()
+        playerWindow.visible = false
+    }
     onOpenedChanged: if (opened) refresh()
     Component.onCompleted: refresh()
 
@@ -143,19 +153,56 @@ Panel {
         }
     }
 
-    KeyboardPanel {
-        id: popup
-        anchorItem: button
-        owner: root
-        bar: root.bar
-        open: root.opened
-        contentWidth: fittedContentWidth(420)
-        contentHeight: fittedContentHeight(550, 580)
-        focusTarget: deck
+    FloatingWindow {
+        id: playerWindow
+        title: "Mixtape"
+        visible: false
+        color: Color.background
+        implicitWidth: 440
+        implicitHeight: 610
+        // Fixed-size utility windows float automatically in Hyprland.
+        minimumSize: Qt.size(440, 610)
+        maximumSize: Qt.size(440, 610)
+        onClosed: root.close()
+
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: Color.accent
+            border.width: 1
+        }
+        Rectangle {
+            id: titleBar
+            width: parent.width
+            height: 34
+            color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.05)
+            Text {
+                anchors.left: parent.left; anchors.leftMargin: 16
+                anchors.verticalCenter: parent.verticalCenter
+                text: "MIXTAPE · drag to move"
+                color: Color.foreground; font.family: "monospace"; font.pixelSize: 11
+            }
+            MouseArea {
+                anchors.fill: parent
+                anchors.rightMargin: 42
+                cursorShape: Qt.SizeAllCursor
+                onPressed: if (titleBar.Window.window) titleBar.Window.window.startSystemMove()
+            }
+            MixButton {
+                anchors.right: parent.right; anchors.rightMargin: 4
+                anchors.verticalCenter: parent.verticalCenter
+                implicitWidth: 32; implicitHeight: 26
+                text: "×"
+                Accessible.name: "Close player"
+                onClicked: root.close()
+            }
+        }
 
         Item {
             id: deck
             anchors.fill: parent
+            anchors.margins: 18
+            anchors.topMargin: titleBar.height + 16
             focus: true
             Keys.onEscapePressed: { if (root.view === "browser") root.view = root.browserReturn; else if (root.view === "queue") root.view = "deck"; else root.close() }
             Keys.onSpacePressed: if (root.view === "deck") root.act("toggle")

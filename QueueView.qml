@@ -4,7 +4,7 @@ import qs.Commons
 
 Item {
     id: root
-    property var state: ({queue: []})
+    property var queueState: ({queue: []})
     property bool busy: false
     property bool saving: false
     property bool confirmingClear: false
@@ -24,13 +24,13 @@ Item {
         Row {
             width: parent.width; spacing: 8
             MixButton { text: "‹ Deck"; onClicked: root.back() }
-            Text { width: parent.width - 85; anchors.verticalCenter: parent.verticalCenter; text: (root.state.name || "Untitled mixtape") + (root.state.dirty ? " *" : ""); textFormat: Text.PlainText; elide: Text.ElideRight; color: Color.foreground; font.family: "monospace"; font.bold: true; font.pixelSize: 13 }
+            Text { width: parent.width - 85; anchors.verticalCenter: parent.verticalCenter; text: (root.queueState.name || "Untitled mixtape") + (root.queueState.dirty ? " *" : ""); textFormat: Text.PlainText; elide: Text.ElideRight; color: Color.foreground; font.family: "monospace"; font.bold: true; font.pixelSize: 13 }
         }
         Row {
             spacing: 8
             MixButton { text: "+ Songs"; onClicked: root.add() }
             MixButton { text: "Load"; onClicked: root.load() }
-            MixButton { text: "Save as"; enabled: !root.busy && (root.state.count || 0) > 0; onClicked: { root.saving = !root.saving; mixName.text = root.state.name || "Untitled mixtape" } }
+            MixButton { text: "Save as"; enabled: !root.busy && (root.queueState.count || 0) > 0; onClicked: { root.saving = !root.saving; mixName.text = root.queueState.name || "Untitled mixtape" } }
             MixButton { text: root.confirmingClear ? "Clear all?" : "New"; enabled: !root.busy; onClicked: { if (root.confirmingClear) { root.action("clear", undefined); root.confirmingClear = false } else root.confirmingClear = true } }
         }
         Column {
@@ -51,7 +51,7 @@ Item {
             Text { text: "Saved in ~/Music/Mixtapes"; color: Color.foreground; opacity: 0.55; font.family: "monospace"; font.pixelSize: 10 }
         }
         Text {
-            text: (root.state.count || 0) + " TRACKS · click to play · arrows to reorder"
+            text: (root.queueState.count || 0) + " TRACKS · click to play · arrows to reorder"
             color: Color.foreground; opacity: 0.55; font.family: "monospace"; font.pixelSize: 10
         }
         ListView {
@@ -59,7 +59,7 @@ Item {
             width: parent.width
             height: Math.max(100, root.height - y - 30)
             clip: true
-            model: root.state.queue || []
+            model: root.queueState.queue || []
             spacing: 4
             Controls.ScrollBar.vertical: Controls.ScrollBar {}
             delegate: Row {

@@ -13,7 +13,7 @@ Panel {
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
 
-    property var state: ({loaded: false, paused: true, title: "Insert a mixtape", volume: 70})
+    property var playerState: ({loaded: false, paused: true, title: "Insert a mixtape", volume: 70})
     property string errorMessage: ""
     property string view: "deck"
     property bool adding: false
@@ -23,7 +23,7 @@ Panel {
     property var listing: ({path: "", parent: "", entries: []})
     property string currentDirectory: Quickshell.env("HOME")
     readonly property string helper: decodeURIComponent(Qt.resolvedUrl("player.py").toString().replace(/^file:\/\//, ""))
-    readonly property bool playing: state.loaded && !state.paused && !state.ended
+    readonly property bool playing: playerState.loaded && !playerState.paused && !playerState.ended
 
     function clock(seconds) {
         var value = Math.max(0, Math.floor(Number(seconds) || 0))
@@ -76,8 +76,8 @@ Panel {
                     pendingView = ""
                 }
             } else {
-                if (JSON.stringify(next.queue) === JSON.stringify(state.queue)) next.queue = state.queue
-                state = next
+                if (JSON.stringify(next.queue) === JSON.stringify(playerState.queue)) next.queue = playerState.queue
+                playerState = next
                 if (showErrors) {
                     if (pendingView) { view = pendingView; pendingView = "" }
                     if (action.actionName === "save") {
@@ -145,7 +145,7 @@ Panel {
             height: Style.spaceReal(12.15)
             ink: button.active ? button.activeColor : button.foreground
         }
-        tooltipText: "Mixtape · " + String(root.state.title).replace(/</g, "‹").replace(/>/g, "›")
+        tooltipText: "Mixtape · " + String(root.playerState.title).replace(/</g, "‹").replace(/>/g, "›")
         onPressed: function(b) {
             if (b === Qt.MiddleButton) root.act("toggle")
             else if (b === Qt.RightButton) root.act("stop")
@@ -222,51 +222,51 @@ Panel {
                     Text { width: parent.width - 65; text: "MIXTAPE / PORTABLE STEREO"; color: Color.foreground; font.family: "monospace"; font.pixelSize: 12; font.bold: true }
                     Text { text: root.playing ? "● PLAY" : "○ IDLE"; color: root.playing ? Color.accent : Color.foreground; font.family: "monospace"; font.pixelSize: 11 }
                 }
-                Cassette { width: parent.width; height: 210; playing: root.playing; animationVisible: root.opened && root.view === "deck"; title: root.state.name || "Untitled mixtape" }
+                Cassette { width: parent.width; height: 210; playing: root.playing; animationVisible: root.opened && root.view === "deck"; title: root.playerState.name || "Untitled mixtape" }
                 Column {
                     width: parent.width; spacing: 5
-                    Text { width: parent.width; text: root.state.title || "Insert a mixtape"; textFormat: Text.PlainText; elide: Text.ElideRight; color: Color.foreground; font.family: "monospace"; font.pixelSize: 15; font.bold: true }
-                    Text { width: parent.width; text: root.state.artist || (root.state.loaded ? "LOCAL AUDIO / TRACK " + ((root.state.index || 0) + 1) + " OF " + (root.state.count || 1) : "Press EJECT to choose music or a playlist"); textFormat: Text.PlainText; elide: Text.ElideRight; color: Color.foreground; opacity: 0.55; font.family: "monospace"; font.pixelSize: 11 }
+                    Text { width: parent.width; text: root.playerState.title || "Insert a mixtape"; textFormat: Text.PlainText; elide: Text.ElideRight; color: Color.foreground; font.family: "monospace"; font.pixelSize: 15; font.bold: true }
+                    Text { width: parent.width; text: root.playerState.artist || (root.playerState.loaded ? "LOCAL AUDIO / TRACK " + ((root.playerState.index || 0) + 1) + " OF " + (root.playerState.count || 1) : "Press EJECT to choose music or a playlist"); textFormat: Text.PlainText; elide: Text.ElideRight; color: Color.foreground; opacity: 0.55; font.family: "monospace"; font.pixelSize: 11 }
                 }
                 Column {
                     width: parent.width; spacing: 7
                     Rectangle {
                         width: parent.width; height: 4; color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15)
-                        Rectangle { height: parent.height; width: parent.width * Math.min(1, (root.state.position || 0) / Math.max(1, root.state.duration || 0)); color: Color.accent }
+                        Rectangle { height: parent.height; width: parent.width * Math.min(1, (root.playerState.position || 0) / Math.max(1, root.playerState.duration || 0)); color: Color.accent }
                     }
                     Item {
                         width: parent.width; height: 14
-                        Text { anchors.left: parent.left; text: root.clock(root.state.position); color: Color.foreground; font.family: "monospace"; font.pixelSize: 11 }
-                        Text { anchors.right: parent.right; text: root.clock(root.state.duration); color: Color.foreground; font.family: "monospace"; font.pixelSize: 11 }
+                        Text { anchors.left: parent.left; text: root.clock(root.playerState.position); color: Color.foreground; font.family: "monospace"; font.pixelSize: 11 }
+                        Text { anchors.right: parent.right; text: root.clock(root.playerState.duration); color: Color.foreground; font.family: "monospace"; font.pixelSize: 11 }
                     }
                 }
                 Row {
                     width: parent.width; spacing: 8
                     DeckButton { width: (parent.width - 32) / 5; text: "⏏"; caption: "EJECT"; hint: "Choose an audio file or playlist"; onClicked: root.eject() }
-                    DeckButton { width: (parent.width - 32) / 5; transportDirection: -1; caption: "REW"; hint: "Previous track · hold to rewind 10 seconds"; enabled: root.state.loaded; onClicked: if (!didHold) root.act("previous"); onHeld: root.act("seek", -10) }
-                    DeckButton { width: (parent.width - 32) / 5; text: root.playing ? "Ⅱ" : "▶"; caption: root.playing ? "PAUSE" : "PLAY"; enabled: root.state.loaded; ink: Color.accent; onClicked: root.act("toggle") }
-                    DeckButton { width: (parent.width - 32) / 5; text: "■"; caption: "STOP"; enabled: root.state.loaded; onClicked: root.act("stop") }
-                    DeckButton { width: (parent.width - 32) / 5; transportDirection: 1; caption: "FF"; hint: "Next track · hold to advance 10 seconds"; enabled: root.state.loaded; onClicked: if (!didHold) root.act("next"); onHeld: root.act("seek", 10) }
+                    DeckButton { width: (parent.width - 32) / 5; transportDirection: -1; caption: "REW"; hint: "Previous track · hold to rewind 10 seconds"; enabled: root.playerState.loaded; onClicked: if (!didHold) root.act("previous"); onHeld: root.act("seek", -10) }
+                    DeckButton { width: (parent.width - 32) / 5; text: root.playing ? "Ⅱ" : "▶"; caption: root.playing ? "PAUSE" : "PLAY"; enabled: root.playerState.loaded; ink: Color.accent; onClicked: root.act("toggle") }
+                    DeckButton { width: (parent.width - 32) / 5; text: "■"; caption: "STOP"; enabled: root.playerState.loaded; onClicked: root.act("stop") }
+                    DeckButton { width: (parent.width - 32) / 5; transportDirection: 1; caption: "FF"; hint: "Next track · hold to advance 10 seconds"; enabled: root.playerState.loaded; onClicked: if (!didHold) root.act("next"); onHeld: root.act("seek", 10) }
                 }
                 Row {
                     width: parent.width; spacing: 12
                     Text { anchors.verticalCenter: parent.verticalCenter; text: "VOL"; color: Color.foreground; font.family: "monospace"; font.pixelSize: 10 }
                     Controls.Slider {
-                        width: parent.width - 100; from: 0; to: 100; value: root.state.volume || 0
+                        width: parent.width - 100; from: 0; to: 100; value: root.playerState.volume || 0
                         onPressedChanged: if (!pressed) root.act("volume", Math.round(value))
                         onMoved: if (!pressed) root.act("volume", Math.round(value))
                     }
-                    Text { anchors.verticalCenter: parent.verticalCenter; text: Math.round(root.state.volume || 0) + "%"; color: Color.foreground; font.family: "monospace"; font.pixelSize: 10 }
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: Math.round(root.playerState.volume || 0) + "%"; color: Color.foreground; font.family: "monospace"; font.pixelSize: 10 }
                 }
                 Row {
                     spacing: 8
-                    MixButton { text: "Queue (" + (root.state.count || 0) + ")"; onClicked: root.view = "queue" }
-                    MixButton { text: root.state.shuffle ? "Shuffle ON" : "Shuffle"; highlightedMix: root.state.shuffle === true; enabled: !action.running && (root.state.count || 0) > 1; onClicked: root.act("shuffle") }
+                    MixButton { text: "Queue (" + (root.playerState.count || 0) + ")"; onClicked: root.view = "queue" }
+                    MixButton { text: root.playerState.shuffle ? "Shuffle ON" : "Shuffle"; highlightedMix: root.playerState.shuffle === true; enabled: !action.running && (root.playerState.count || 0) > 1; onClicked: root.act("shuffle") }
                     MixButton {
-                        text: "Repeat: " + (root.state.repeat || "off")
-                        highlightedMix: root.state.repeat !== undefined && root.state.repeat !== "off"
-                        enabled: !action.running && (root.state.count || 0) > 0
-                        onClicked: root.act("repeat", root.state.repeat === "off" ? "all" : root.state.repeat === "all" ? "one" : "off")
+                        text: "Repeat: " + (root.playerState.repeat || "off")
+                        highlightedMix: root.playerState.repeat !== undefined && root.playerState.repeat !== "off"
+                        enabled: !action.running && (root.playerState.count || 0) > 0
+                        onClicked: root.act("repeat", root.playerState.repeat === "off" ? "all" : root.playerState.repeat === "all" ? "one" : "off")
                     }
                 }
             }
@@ -276,7 +276,7 @@ Panel {
                 anchors.fill: parent
                 anchors.bottomMargin: 26
                 visible: root.view === "queue"
-                state: root.state
+                queueState: root.playerState
                 busy: action.running
                 onBack: root.view = "deck"
                 onAdd: root.openBrowser(true, false)

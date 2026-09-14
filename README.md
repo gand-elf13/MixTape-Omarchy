@@ -24,7 +24,7 @@ The installer lets you choose a bar section. Mixtape defaults to the right.
 Move it any time:
 
 ```bash
-omarchy bar move local.mixtape --section center
+omarchy bar move io.github.nwohater.mixtape --section center
 ```
 
 Use `left`, `center`, or `right`. Click the cassette icon to open the deck.
@@ -98,7 +98,7 @@ on the same machine works; moving your music files requires updating it.
 ## Update
 
 ```bash
-omarchy plugin update local.mixtape
+omarchy plugin update io.github.nwohater.mixtape
 omarchy restart shell
 ```
 
@@ -121,7 +121,7 @@ omarchy restart shell
 ```
 
 `install.py` links this checkout into
-`~/.config/omarchy/plugins/local.mixtape`, backs up `shell.json`, and adds the
+`~/.config/omarchy/plugins/io.github.nwohater.mixtape`, backs up `shell.json`, and adds the
 widget while preserving other settings. Keep the checkout in place. It
 refuses to replace a different installation with the same plugin ID.
 If you already use this development installation, skip `omarchy plugin add`.
@@ -164,7 +164,7 @@ python3 player.py quit
 ## Remove
 
 ```bash
-omarchy plugin remove local.mixtape
+omarchy plugin remove io.github.nwohater.mixtape
 ```
 
 To stop playback first, run the `player.py quit` command from your checkout

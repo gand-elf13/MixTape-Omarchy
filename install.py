@@ -16,7 +16,7 @@ config_dir = Path(os.environ.get('XDG_CONFIG_HOME', str(Path.home() / '.config')
 config_file = config_dir / 'shell.json'
 config = json.loads(config_file.read_text())
 layout = config['bar']['layout']
-plugin_id = 'local.mixtape'
+plugin_id = 'io.github.nwohater.mixtape'
 link = config_dir / 'plugins' / plugin_id
 if link.exists() or link.is_symlink():
     if link.resolve() != source:

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "local.mixtape",
+  "id": "io.github.nwohater.mixtape",
   "name": "Mixtape",
   "version": "0.3.0",
   "description": "A cassette deck for local music, right in the Omarchy bar.",

@@ -8,7 +8,7 @@ import qs.Ui
 
 Panel {
     id: root
-    moduleName: "local.mixtape"
+    moduleName: "io.github.nwohater.mixtape"
     manageIpc: false
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight

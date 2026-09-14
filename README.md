@@ -170,3 +170,7 @@ omarchy plugin remove io.github.nwohater.mixtape
 To stop playback first, run the `player.py quit` command from your checkout
 or the installed plugin directory. Removing the plugin does not remove your
 music or saved mixtapes.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

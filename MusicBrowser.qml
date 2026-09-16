@@ -67,6 +67,7 @@ Item {
             id: files
             width: parent.width; height: Math.max(100, root.height - y - (root.adding ? 76 : 60)); clip: true
             model: root.displayEntries
+            cacheBuffer: 2000
             Controls.ScrollBar.vertical: Controls.ScrollBar {}
             delegate: Row {
                 required property var modelData
@@ -85,8 +86,9 @@ Item {
                     contentItem: Text {
                         text: (modelData.directory ? "▸  " : "") + modelData.name
                         textFormat: Text.PlainText; elide: Text.ElideMiddle
-                        color: Color.foreground; font.family: "monospace"; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter
+                        color: parent.activeFocus ? Color.accent : Color.foreground; font.family: "monospace"; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter
                     }
+                    background: Rectangle { color: parent.activeFocus ? Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.12) : "transparent" }
                     onClicked: {
                         if (modelData.directory) root.browse(modelData.path)
                         else if (root.adding) root.select(modelData.path, root.selected.indexOf(modelData.path) === -1)

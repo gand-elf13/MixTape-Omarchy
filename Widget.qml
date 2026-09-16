@@ -24,6 +24,8 @@ Panel {
     property string libraryRoot: ""
     property bool libraryPending: false
     property string currentDirectory: Quickshell.env("HOME")
+    property var navTarget: null
+    property bool sliderGrabbed: false
     readonly property string helper: decodeURIComponent(Qt.resolvedUrl("player.py").toString().replace(/^file:\/\//, ""))
     readonly property bool playing: playerState.loaded && !playerState.paused && !playerState.ended
 
@@ -33,6 +35,131 @@ Panel {
     }
     function refresh() {
         if (!poll.running && !action.running) poll.running = true
+    }
+    function isNavItem(item) {
+        if (!item || item === root || item === deck) return false
+        try {
+            if (!item.visible) return false
+            if (item.enabled === false) {
+                var scan = item
+                var inList = false
+                while (scan && scan !== deck) {
+                    if (typeof scan.positionViewAtIndex === "function") { inList = true; break }
+                    scan = scan.parent
+                }
+                if (!inList) return false
+            }
+        } catch (e) { return false }
+        if (typeof item.clicked === "function") return true
+        if (item.to !== undefined && item.from !== undefined && typeof item.value === "number") return true
+        return false
+    }
+    function isSlider(item) {
+        return item && item.to !== undefined && item.from !== undefined && typeof item.value === "number"
+    }
+    function navCenter(item) {
+        var p = item.mapToItem(deck, 0, 0)
+        return {x: p.x + item.width / 2, y: p.y + item.height / 2}
+    }
+    function collectNavItems() {
+        var list = []
+        function walk(item) {
+            if (!item.visible) return
+            if (root.isNavItem(item)) list.push(item)
+            for (var i = 0; i < item.children.length; i++) walk(item.children[i])
+        }
+        walk(deck)
+        return list
+    }
+    function navGrid() {
+        var items = root.collectNavItems().sort(function(a, b) {
+            var ca = root.navCenter(a), cb = root.navCenter(b)
+            return ca.y !== cb.y ? ca.y - cb.y : ca.x - cb.x
+        })
+        var lines = []
+        var current
+        for (var i = 0; i < items.length; i++) {
+            var c = root.navCenter(items[i])
+            if (!current || Math.abs(c.y - current.y) > 12) {
+                current = {y: c.y, items: []}
+                lines.push(current)
+            }
+            current.items.push(items[i])
+        }
+        for (var j = 0; j < lines.length; j++) {
+            lines[j].items.sort(function(a, b) {
+                return root.navCenter(a).x - root.navCenter(b).x
+            })
+        }
+        return lines
+    }
+    function focusNav(item) {
+        root.navTarget = item
+        root.sliderGrabbed = false
+        var node = item
+        while (node && node !== deck && typeof node.positionViewAtIndex !== "function") node = node.parent
+        if (node && node !== deck) {
+            var p = item.mapToItem(node.contentItem, 0, 0)
+            var idx = node.indexAt(p.x, p.y)
+            if (idx >= 0) node.positionViewAtIndex(idx, ListView.Contain)
+        }
+        item.forceActiveFocus()
+    }
+    function currentTarget() {
+        if (root.navTarget && root.isNavItem(root.navTarget)) return root.navTarget
+        var win = deck.Window.window
+        var af = win ? win.activeFocusItem : null
+        if (af && af !== deck && root.isNavItem(af)) return af
+        return null
+    }
+    function activate() {
+        if (root.sliderGrabbed) { root.sliderGrabbed = false; deck.forceActiveFocus(); return }
+        var t = root.currentTarget()
+        if (!t) return
+        if (root.isSlider(t)) { root.sliderGrabbed = true; t.forceActiveFocus(); return }
+        if (t.enabled === false) return
+        if (typeof t.clicked === "function") t.clicked()
+    }
+    function adjustVolume(change) {
+        var base = volumeSlider ? volumeSlider.value : (root.playerState.volume || 0)
+        var next = Math.max(0, Math.min(100, Math.round(base + change)))
+        if (volumeSlider) volumeSlider.value = next
+        root.act("volume", next)
+    }
+    function navigate(dir) {
+        if (root.sliderGrabbed) {
+            root.adjustVolume((dir === "h" || dir === "j") ? -5 : 5)
+            return
+        }
+        var lines = root.navGrid()
+        if (lines.length === 0) return
+        var cur = root.currentTarget()
+        var li = -1, ci = 0
+        for (var i = 0; i < lines.length; i++) {
+            for (var j = 0; j < lines[i].items.length; j++) {
+                if (lines[i].items[j] === cur) { li = i; ci = j; break }
+            }
+            if (li >= 0) break
+        }
+        var target = null
+        if (li < 0) {
+            target = dir === "j" || dir === "l" ? lines[0].items[0] : lines[lines.length - 1].items[0]
+        } else if (dir === "j") {
+            if (li + 1 < lines.length) {
+                var down = lines[li + 1].items
+                target = root.view === "queue" ? down[Math.min(ci, down.length - 1)] : down[0]
+            }
+        } else if (dir === "k") {
+            if (li > 0) {
+                var up = lines[li - 1].items
+                target = root.view === "queue" ? up[Math.min(ci, up.length - 1)] : up[0]
+            }
+        } else if (dir === "l") {
+            if (ci + 1 < lines[li].items.length) target = lines[li].items[ci + 1]
+        } else if (dir === "h") {
+            if (ci > 0) target = lines[li].items[ci - 1]
+        }
+        if (target) root.focusNav(target)
     }
     function act(command, value) {
         if (action.running) return
@@ -217,10 +344,24 @@ Panel {
             anchors.margins: 18
             anchors.topMargin: titleBar.height + 16
             focus: true
-            Keys.onEscapePressed: { if (root.view === "browser") root.view = root.browserReturn; else if (root.view === "queue") root.view = "deck"; else root.close() }
-            Keys.onSpacePressed: if (root.view === "deck") root.act("toggle")
+            Keys.onEscapePressed: {
+                if (root.sliderGrabbed) { root.sliderGrabbed = false; deck.forceActiveFocus(); return }
+                if (root.navTarget && root.view === "deck") { root.navTarget = null; deck.forceActiveFocus(); return }
+                if (root.view === "browser") root.view = root.browserReturn
+                else if (root.view === "queue") root.view = "deck"
+                else root.close()
+            }
+            Keys.onSpacePressed: if (root.view === "deck" && !root.currentTarget()) root.act("toggle")
             Keys.onLeftPressed: if (root.view === "deck") root.act("seek", -10)
             Keys.onRightPressed: if (root.view === "deck") root.act("seek", 10)
+            Keys.onReturnPressed: root.activate()
+            Keys.onEnterPressed: root.activate()
+            Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_H) root.navigate("h")
+                else if (event.key === Qt.Key_J) root.navigate("j")
+                else if (event.key === Qt.Key_K) root.navigate("k")
+                else if (event.key === Qt.Key_L) root.navigate("l")
+            }
 
             Column {
                 id: deckColumn
@@ -262,6 +403,7 @@ Panel {
                     width: parent.width; spacing: 12
                     Text { anchors.verticalCenter: parent.verticalCenter; text: "VOL"; color: Color.foreground; font.family: "monospace"; font.pixelSize: 10 }
                     Controls.Slider {
+                        id: volumeSlider
                         width: parent.width - 100; from: 0; to: 100; value: root.playerState.volume || 0
                         onPressedChanged: if (!pressed) root.act("volume", Math.round(value))
                         onMoved: if (!pressed) root.act("volume", Math.round(value))

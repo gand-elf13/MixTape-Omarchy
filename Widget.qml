@@ -361,6 +361,13 @@ Panel {
                 else if (event.key === Qt.Key_J) root.navigate("j")
                 else if (event.key === Qt.Key_K) root.navigate("k")
                 else if (event.key === Qt.Key_L) root.navigate("l")
+                else if (event.key === Qt.Key_W || event.key === Qt.Key_Z) root.eject()
+                else if (event.key === Qt.Key_X) root.act("previous")
+                else if (event.key === Qt.Key_C) root.act("toggle")
+                else if (event.key === Qt.Key_V) root.act("stop")
+                else if (event.key === Qt.Key_B) root.act("next")
+                else if (event.key === Qt.Key_S) root.act("shuffle")
+                else if (event.key === Qt.Key_R) root.act("repeat", root.playerState.repeat === "off" ? "all" : root.playerState.repeat === "all" ? "one" : "off")
             }
 
             Column {

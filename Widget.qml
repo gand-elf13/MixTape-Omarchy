@@ -21,6 +21,8 @@ Panel {
     property string pendingView: ""
     property string notice: ""
     property var listing: ({path: "", parent: "", entries: []})
+    property string libraryRoot: ""
+    property bool libraryPending: false
     property string currentDirectory: Quickshell.env("HOME")
     readonly property string helper: decodeURIComponent(Qt.resolvedUrl("player.py").toString().replace(/^file:\/\//, ""))
     readonly property bool playing: playerState.loaded && !playerState.paused && !playerState.ended
@@ -47,7 +49,10 @@ Panel {
         browser.running = true
     }
     function eject() {
-        openBrowser(false, false)
+        browserReturn = view
+        adding = false
+        view = "browser"
+        showLibrary()
     }
     function openBrowser(append, saved) {
         browserReturn = view
@@ -58,6 +63,7 @@ Panel {
     }
     function showLibrary() {
         if (browser.running) return
+        libraryPending = true
         browser.command = ["python3", helper, "library"]
         browser.running = true
     }
@@ -123,6 +129,10 @@ Panel {
                     else {
                         root.listing = result
                         root.currentDirectory = result.path
+                        if (root.libraryPending) {
+                            root.libraryRoot = result.path
+                            root.libraryPending = false
+                        }
                     }
                 } catch (e) { root.errorMessage = "Could not read directory" }
             }
@@ -289,6 +299,7 @@ Panel {
                 visible: root.view === "browser"
                 listing: root.listing
                 adding: root.adding
+                libraryRoot: root.libraryRoot
                 busy: browser.running || action.running
                 onBack: root.view = root.browserReturn
                 onBrowse: function(path) { root.browse(path) }

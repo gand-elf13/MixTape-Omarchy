@@ -112,6 +112,34 @@ Panel {
         if (af && af !== deck && root.isNavItem(af)) return af
         return null
     }
+    function firstListItem() {
+        var items = root.collectNavItems()
+        var fallback = null
+        for (var i = 0; i < items.length; i++) {
+            var node = items[i]
+            var inList = false
+            while (node && node !== deck) {
+                if (typeof node.positionViewAtIndex === "function") { inList = true; break }
+                node = node.parent
+            }
+            if (!inList) continue
+            if (!fallback) fallback = items[i]
+            if (typeof items[i].checkState === "undefined") return items[i]
+        }
+        return fallback
+    }
+    function focusDefault() {
+        if (!playerWindow.visible) return
+        root.sliderGrabbed = false
+        var target = null
+        if (root.view === "deck" && root.isNavItem(ejectButton)) target = ejectButton
+        if (!target) target = root.firstListItem()
+        if (!target) {
+            var lines = root.navGrid()
+            if (lines.length) target = lines[0].items[0]
+        }
+        if (target) root.focusNav(target)
+    }
     function activate() {
         if (root.sliderGrabbed) { root.sliderGrabbed = false; deck.forceActiveFocus(); return }
         var t = root.currentTarget()
@@ -176,7 +204,8 @@ Panel {
         browser.running = true
     }
     function eject() {
-        browserReturn = view
+        if (!adding && view === "browser") return
+        if (view !== "browser") browserReturn = view
         adding = false
         view = "browser"
         showLibrary()
@@ -226,13 +255,14 @@ Panel {
     function open() {
         controller.show()
         playerWindow.visible = true
-        Qt.callLater(function() { deck.forceActiveFocus() })
+        Qt.callLater(function() { root.focusDefault() })
     }
     function close() {
         controller.hide()
         playerWindow.visible = false
     }
     onOpenedChanged: if (opened) refresh()
+    onViewChanged: Qt.callLater(function() { root.focusDefault() })
     Component.onCompleted: refresh()
 
     Process {
@@ -260,6 +290,7 @@ Panel {
                             root.libraryRoot = result.path
                             root.libraryPending = false
                         }
+                        Qt.callLater(function() { root.focusDefault() })
                     }
                 } catch (e) { root.errorMessage = "Could not read directory" }
             }
@@ -345,8 +376,7 @@ Panel {
             anchors.topMargin: titleBar.height + 16
             focus: true
             Keys.onEscapePressed: {
-                if (root.sliderGrabbed) { root.sliderGrabbed = false; deck.forceActiveFocus(); return }
-                if (root.navTarget && root.view === "deck") { root.navTarget = null; deck.forceActiveFocus(); return }
+                if (root.sliderGrabbed) { root.sliderGrabbed = false; root.focusNav(volumeSlider); return }
                 if (root.view === "browser") root.view = root.browserReturn
                 else if (root.view === "queue") root.view = "deck"
                 else root.close()
@@ -400,7 +430,7 @@ Panel {
                 }
                 Row {
                     width: parent.width; spacing: 8
-                    DeckButton { width: (parent.width - 32) / 5; text: "⏏"; caption: "EJECT"; hint: "Choose an audio file or playlist"; onClicked: root.eject() }
+                    DeckButton { id: ejectButton; width: (parent.width - 32) / 5; text: "⏏"; caption: "EJECT"; hint: "Choose an audio file or playlist"; onClicked: root.eject() }
                     DeckButton { width: (parent.width - 32) / 5; transportDirection: -1; caption: "REW"; hint: "Previous track · hold to rewind 10 seconds"; enabled: root.playerState.loaded; onClicked: if (!didHold) root.act("previous"); onHeld: root.act("seek", -10) }
                     DeckButton { width: (parent.width - 32) / 5; text: root.playing ? "Ⅱ" : "▶"; caption: root.playing ? "PAUSE" : "PLAY"; enabled: root.playerState.loaded; ink: Color.accent; onClicked: root.act("toggle") }
                     DeckButton { width: (parent.width - 32) / 5; text: "■"; caption: "STOP"; enabled: root.playerState.loaded; onClicked: root.act("stop") }

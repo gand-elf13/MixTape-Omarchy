@@ -21,8 +21,10 @@ Panel {
     property string pendingView: ""
     property string notice: ""
     property var listing: ({path: "", parent: "", entries: []})
+    property var albumListing: ({path: "", entries: []})
     property string libraryRoot: ""
     property bool libraryPending: false
+    property bool albumPending: false
     property string currentDirectory: Quickshell.env("HOME")
     property var navTarget: null
     property bool sliderGrabbed: false
@@ -208,6 +210,7 @@ Panel {
         if (view !== "browser") browserReturn = view
         adding = false
         view = "browser"
+        musicBrowser.albumView = false
         showLibrary()
     }
     function openBrowser(append, saved) {
@@ -223,9 +226,15 @@ Panel {
         browser.command = ["python3", helper, "library"]
         browser.running = true
     }
+    function showAlbums() {
+        if (browser.running) return
+        albumPending = true
+        browser.command = ["python3", helper, "albums"]
+        browser.running = true
+    }
     function submitFiles(command, value) {
         if (action.running) return
-        pendingView = command === "load-many" ? "deck" : "queue"
+        pendingView = (command === "load-many" || command === "load-album") ? "deck" : "queue"
         act(command, value)
     }
     function acceptState(data, showErrors) {
@@ -283,13 +292,19 @@ Panel {
                 try {
                     var result = JSON.parse(text)
                     if (result.error) root.errorMessage = result.error
-                    else {
+                    else if (root.libraryPending) {
                         root.listing = result
                         root.currentDirectory = result.path
-                        if (root.libraryPending) {
-                            root.libraryRoot = result.path
-                            root.libraryPending = false
-                        }
+                        root.libraryRoot = result.path
+                        root.libraryPending = false
+                        Qt.callLater(function() { root.focusDefault() })
+                    } else if (root.albumPending) {
+                        root.albumListing = result
+                        root.albumPending = false
+                        Qt.callLater(function() { root.focusDefault() })
+                    } else {
+                        root.listing = result
+                        root.currentDirectory = result.path
                         Qt.callLater(function() { root.focusDefault() })
                     }
                 } catch (e) { root.errorMessage = "Could not read directory" }
@@ -377,15 +392,19 @@ Panel {
             focus: true
             Keys.onEscapePressed: {
                 if (root.sliderGrabbed) { root.sliderGrabbed = false; root.focusNav(volumeSlider); return }
-                if (root.view === "browser") root.view = root.browserReturn
+                if (root.view === "browser") {
+                    if (musicBrowser.searchTyping) { musicBrowser.cancelSearch(); return }
+                    if (musicBrowser.searchActive) { musicBrowser.clearSearch(); return }
+                    root.view = root.browserReturn
+                }
                 else if (root.view === "queue") root.view = "deck"
                 else root.close()
             }
             Keys.onSpacePressed: if (root.view === "deck" && !root.currentTarget()) root.act("toggle")
             Keys.onLeftPressed: if (root.view === "deck") root.act("seek", -10)
             Keys.onRightPressed: if (root.view === "deck") root.act("seek", 10)
-            Keys.onReturnPressed: root.activate()
-            Keys.onEnterPressed: root.activate()
+            Keys.onReturnPressed: if (!musicBrowser.searchTyping) root.activate()
+            Keys.onEnterPressed: if (!musicBrowser.searchTyping) root.activate()
             Keys.onPressed: function(event) {
                 if (event.key === Qt.Key_H) root.navigate("h")
                 else if (event.key === Qt.Key_J) root.navigate("j")
@@ -398,6 +417,19 @@ Panel {
                 else if (event.key === Qt.Key_B) root.act("next")
                 else if (event.key === Qt.Key_S) root.act("shuffle")
                 else if (event.key === Qt.Key_R) root.act("repeat", root.playerState.repeat === "off" ? "all" : root.playerState.repeat === "all" ? "one" : "off")
+                else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                    if (root.view === "browser" && musicBrowser.tabsVisible) {
+                        musicBrowser.toggleTabs()
+                        Qt.callLater(function() { root.focusDefault() })
+                        event.accepted = true
+                    }
+                }
+                else if (event.key === Qt.Key_Slash) {
+                    if (root.view === "browser" && !musicBrowser.searchTyping) {
+                        musicBrowser.startSearch()
+                        event.accepted = true
+                    }
+                }
             }
 
             Column {
@@ -473,16 +505,20 @@ Panel {
                 onAction: function(command, value) { root.act(command, value) }
             }
             MusicBrowser {
+                id: musicBrowser
                 anchors.fill: parent
                 anchors.bottomMargin: 26
                 visible: root.view === "browser"
                 listing: root.listing
+                albums: root.albumListing
                 adding: root.adding
                 libraryRoot: root.libraryRoot
                 busy: browser.running || action.running
                 onBack: root.view = root.browserReturn
                 onBrowse: function(path) { root.browse(path) }
                 onLibrary: root.showLibrary()
+                onAlbumsRequested: root.showAlbums()
+                onRefocus: Qt.callLater(function() { root.focusDefault() })
                 onSubmit: function(command, value) { root.submitFiles(command, value) }
             }
             Text {

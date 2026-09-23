@@ -111,6 +111,36 @@ def playlist_directory():
     return Path(os.environ.get('MIXTAPE_PLAYLIST_DIR', str(Path.home() / 'Music' / 'Mixtapes'))).expanduser()
 
 
+def music_directory():
+    return Path(os.environ.get('MIXTAPE_MUSIC_DIR', str(Path.home() / 'Music'))).expanduser()
+
+
+def folder_audio(folder):
+    return [p for p in sorted(folder.iterdir(), key=lambda p: p.name.casefold())
+            if p.is_file() and p.suffix.lower() in AUDIO]
+
+
+def albums(value=None):
+    directory = music_directory()
+    if value:
+        directory = Path(value).expanduser().resolve()
+    mixer = playlist_directory().resolve()
+    entries = []
+    if directory.is_dir():
+        for root, dirs, files in os.walk(directory):
+            root_path = Path(root)
+            dirs[:] = sorted((d for d in dirs if not d.startswith('.')), key=str.casefold)
+            if root_path.resolve() == mixer:
+                dirs[:] = []
+                continue
+            if root_path.resolve() == directory.resolve():
+                continue
+            tracks = [Path(f) for f in sorted(files, key=str.casefold) if Path(f).suffix.lower() in AUDIO]
+            if tracks:
+                entries.append({'name': root_path.name, 'path': str(root_path), 'trackCount': len(tracks)})
+    return {'path': str(directory), 'entries': entries}
+
+
 def details(client):
     return client.get('user-data/mixtape', {})
 
@@ -216,17 +246,23 @@ def execute(args):
         directory = playlist_directory()
         return browse(str(directory)) if directory.exists() else {
             'path': str(directory), 'parent': str(directory.parent), 'entries': []}
-    if action not in {'status', 'load', 'load-many', 'append', 'add-folder', 'save', 'play-entry',
+    if action == 'albums':
+        return albums(args[1] if len(args) > 1 else None)
+    if action not in {'status', 'load', 'load-many', 'load-album', 'append', 'add-folder', 'albums',
+                      'save', 'play-entry',
                       'remove', 'move', 'clear', 'shuffle', 'repeat',
                       'toggle', 'stop', 'previous', 'next', 'seek', 'volume', 'quit'}:
         raise ValueError('Unknown player action')
     selected = []
+    folder = None
     if action in {'load', 'load-many', 'append'}:
         selected = select_files([args[1]] if action == 'load' else json.loads(args[1]))
-    elif action == 'add-folder':
+    elif action in {'add-folder', 'load-album'}:
         folder = Path(args[1]).expanduser().resolve(strict=True)
-        selected = select_files([str(p) for p in sorted(folder.iterdir(), key=lambda p: p.name.casefold())
-                                 if p.is_file() and p.suffix.lower() in AUDIO])
+        selected = [str(p) for p in folder_audio(folder)]
+        if action == 'load-album' and not selected:
+            raise ValueError(f'No music files in “{folder.name}”')
+        selected = select_files(selected)
     client = connect(start=bool(selected))
     if client is None:
         if action not in {'status', 'quit'}:
@@ -234,7 +270,7 @@ def execute(args):
         return status(None)
     try:
         if selected:
-            replace = action in {'load', 'load-many'}
+            replace = action in {'load', 'load-many', 'load-album'}
             was_empty = not queue(client)
             shuffled = details(client).get('shuffle', False)
             if shuffled:
@@ -246,8 +282,11 @@ def execute(args):
                 if not replace:
                     client.command('set_property', 'playlist-pos', 0)
                 client.command('set_property', 'pause', not replace)
-                name = selected[0].stem if len(selected) == 1 and selected[0].suffix.lower() in PLAYLISTS else 'Untitled mixtape'
-                update_details(client, name=name, dirty=name == 'Untitled mixtape', shuffle=False)
+                if action == 'load-album':
+                    update_details(client, name=folder.name, dirty=False, shuffle=False)
+                else:
+                    name = selected[0].stem if len(selected) == 1 and selected[0].suffix.lower() in PLAYLISTS else 'Untitled mixtape'
+                    update_details(client, name=name, dirty=name == 'Untitled mixtape', shuffle=False)
             else:
                 update_details(client, dirty=True)
                 if shuffled:

@@ -8,10 +8,19 @@ ShellRoot {
     property real stopped: 0
     property var reel: null
     property int phase: 0
+    property int wait: 0
     function findReel(item) {
         if (item.objectName === "cassetteReel0") return item
         for (var i = 0; i < item.children.length; i++) {
             var found = findReel(item.children[i])
+            if (found) return found
+        }
+        return null
+    }
+    function findByName(item, name) {
+        if (item.objectName === name) return item
+        for (var i = 0; i < item.children.length; i++) {
+            var found = findByName(item.children[i], name)
             if (found) return found
         }
         return null
@@ -29,12 +38,17 @@ ShellRoot {
             ]})
         }
         Mixtape.MusicBrowser {
+            id: probeBrowser
             width: 396; height: 510
             listing: ({path: "/tmp", parent: "/", entries: [
                 {name: "Songs", path: "/tmp/Songs", directory: true},
                 {name: "Track one.wav", path: "/tmp/one.wav", directory: false}
             ]})
+            albums: ({path: "/music", entries: [
+                {name: "Album A", path: "/music/A", trackCount: 3}
+            ]})
         }
+        Mixtape.Widget { id: widget; moduleName: "mixtape-test" }
     }
     Timer {
         interval: 180; repeat: true; running: true
@@ -61,8 +75,47 @@ ShellRoot {
                 before = reel.rotation
             } else if (phase === 7) {
                 check(reel.rotation !== before, "resumes after pause")
-                console.log("PASS: reel close/reopen and pause/resume; populated queue and browser loaded")
-                Qt.quit()
+                check(findByName(probeBrowser, "browserTabCustom") !== null, "custom tab exists")
+                check(findByName(probeBrowser, "browserTabAlbums") !== null, "albums tab exists")
+                check(!probeBrowser.albumView, "eject opens on custom tab")
+                probeBrowser.toggleTabs()
+            } else if (phase === 8) {
+                check(probeBrowser.albumView, "Tab switches to albums")
+                var albumsList = findByName(probeBrowser, "albumList")
+                check(albumsList !== null, "album list exists")
+                check(albumsList.count === 1, "album tape rendered from folder")
+                check(!findByName(probeBrowser, "fileList").visible, "file list hidden on albums tab")
+                probeBrowser.toggleTabs()
+            } else if (phase === 9) {
+                check(!probeBrowser.albumView, "Tab switches back to custom")
+                check(findByName(probeBrowser, "fileList").visible, "file list restored on custom tab")
+                check(findByName(probeBrowser, "searchLine") !== null, "search line exists")
+                check(findByName(probeBrowser, "searchField") !== null, "search field exists")
+                probeBrowser.searchQuery = "Songs"
+                check(probeBrowser.displayEntries.length === 2, "filter narrows the custom list")
+                check(probeBrowser.searchActive, "filtered state is active")
+                probeBrowser.startSearch()
+            } else if (phase === 10) {
+                check(probeBrowser.searchTyping, "/ starts typing mode")
+                probeBrowser.confirmSearch()
+                check(!probeBrowser.searchTyping && probeBrowser.searchQuery === "Songs", "Enter confirms the filter")
+                check(probeBrowser.searchActive, "confirmed filter stays active")
+            } else if (phase === 11) {
+                probeBrowser.clearSearch()
+                check(!probeBrowser.searchActive, "Escape clears the filter")
+                check(probeBrowser.displayEntries.length === 3, "list restored after clear")
+                widget.eject()
+            } else if (phase === 12) {
+                check(widget.view === "browser", "eject opens the browser")
+            } else if (phase === 13) {
+                if (widget.listing.entries.length === 0 && wait < 40) {
+                    wait++
+                    phase = 12
+                } else {
+                    check(widget.listing.entries.length === 1, "custom tab lists saved mixes")
+                    console.log("PASS: reel close/reopen and pause/resume; tab switching, dynamic album tapes, filtering, and eject library")
+                    Qt.quit()
+                }
             }
         }
     }

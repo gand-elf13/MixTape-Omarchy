@@ -17,16 +17,19 @@ class PlaybackTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='mixtape-test-')
         self.path = Path(self.temp.name)
-        self.env = patch.dict(os.environ, {'MIXTAPE_RUNTIME_DIR': str(self.path / 'runtime'), 'MIXTAPE_TEST_AUDIO_NULL': '1', 'MIXTAPE_PLAYLIST_DIR': str(self.path / 'mixes')})
+        self.env = patch.dict(os.environ, {'MIXTAPE_RUNTIME_DIR': str(self.path / 'runtime'), 'MIXTAPE_TEST_AUDIO_NULL': '1', 'MIXTAPE_PLAYLIST_DIR': str(self.path / 'mixes'), 'MIXTAPE_MUSIC_DIR': str(self.path)})
         self.env.start()
         self.track = self.path / 'Track "one" $(literal).wav'
         self.second = self.path / 'Track two.wav'
         for path in (self.track, self.second):
-            with wave.open(str(path), 'wb') as audio:
-                audio.setnchannels(1)
-                audio.setsampwidth(2)
-                audio.setframerate(8000)
-                audio.writeframes(b'\0\0' * 8000 * 30)
+            self.make_wav(path)
+
+    def make_wav(self, path):
+        with wave.open(str(path), 'wb') as audio:
+            audio.setnchannels(1)
+            audio.setsampwidth(2)
+            audio.setframerate(8000)
+            audio.writeframes(b'\0\0' * 8000 * 30)
 
     def tearDown(self):
         try:
@@ -66,6 +69,32 @@ class PlaybackTest(unittest.TestCase):
         self.assertEqual(player.run(['status'])['index'], 1)
         player.run(['previous'])
         self.wait_for(lambda s: s.get('index') == 0)
+
+    def test_albums_and_load_album(self):
+        album = self.path / 'Album Name'
+        album.mkdir()
+        self.make_wav(album / '01 First.wav')
+        self.make_wav(album / '02 Second.wav')
+        deep = self.path / 'Collection' / 'Deep Album'
+        deep.mkdir(parents=True)
+        self.make_wav(deep / 'A.wav')
+        (self.path / 'Empty').mkdir()
+        state = player.run(['albums'])
+        self.assertEqual(state['path'], str(self.path))
+        self.assertEqual([entry['name'] for entry in state['entries']], ['Album Name', 'Deep Album'])
+        self.assertEqual(state['entries'][0]['path'], str(album))
+        self.assertEqual(state['entries'][0]['trackCount'], 2)
+        player.run(['load-album', str(album)])
+        state = self.wait_for(lambda s: s.get('name') == 'Album Name' and s.get('count') == 2 and s['loaded'])
+        self.assertFalse(state['paused'])
+        self.assertEqual(state['queue'][0]['path'], str(album / '01 First.wav'))
+        player.run(['load-album', str(deep)])
+        state = self.wait_for(lambda s: s.get('name') == 'Deep Album' and s.get('count') == 1 and s['loaded'])
+        self.assertEqual(state['queue'][0]['path'], str(deep / 'A.wav'))
+        with self.assertRaises(ValueError):
+            player.run(['load-album', str(self.path / 'Empty')])
+        with self.assertRaises(FileNotFoundError):
+            player.run(['load-album', str(self.path / 'Missing')])
 
     def test_browser_and_invalid_selection(self):
         (self.path / 'Albums').mkdir()

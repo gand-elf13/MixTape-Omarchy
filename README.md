@@ -58,6 +58,18 @@ artist below. An asterisk in the queue header indicates unsaved changes.
 **New** offers to clear the current queue so you can build another mix; it
 never deletes your audio files or saved playlists.
 
+Eject opens a two-tab library. **Custom** browses files and saved mixes, as
+before. **Albums** lists every subfolder of your music directory
+(`~/Music` by default, or `MIXTAPE_MUSIC_DIR`) that contains audio files;
+each is a tape named after its folder with its track count. These album tapes
+are generated on the fly when the tab opens — no M3U is stored — and loading
+one replaces the queue, names the mix after the folder, and starts playing.
+Press **Tab** to switch between the two tabs. On either tab, press **`/`** to
+start filtering; the bottom line highlights while you type and stays framed
+once the filter is active. **Enter** confirms the filter and returns focus to
+the filtered list; **Escape** while typing drops the search, and **Escape** once
+the filter is confirmed clears it.
+
 Adding songs preserves existing playback. Adding to an empty queue prepares
 it paused, ready for you to press Play. **Play selected** replaces the queue
 and starts playback. M3U, M3U8, and PLS files can also be selected or appended.
@@ -66,7 +78,10 @@ and starts playback. M3U, M3U8, and PLS files can also be selected or appended.
 
 | Control | Action |
 | --- | --- |
-| Eject | Browse songs and playlists to load |
+| Eject | Browse a two-tab library: custom mixes or album tapes; Tab switches tabs |
+| / (in eject) | Start filtering the current tab |
+| Enter (filtering) | Confirm the filter and return to the list |
+| Escape (filtering) | Drop (while typing) or clear (when active) the filter |
 | Play / Pause | Toggle playback |
 | Stop | Pause and rewind the current song |
 | REW / FF click | Previous / next track |
